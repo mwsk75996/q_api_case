@@ -15,6 +15,12 @@ TEST_F(QualityServiceTest, GradeBoundaries) {
     EXPECT_EQ(service.calculateGrade(101), "Ugyldig");
 }
 
+TEST_F(QualityServiceTest, GradeBoundaryNeighborsAroundSixty) {
+    EXPECT_EQ(service.calculateGrade(59), "F");
+    EXPECT_EQ(service.calculateGrade(60), "D");
+    EXPECT_EQ(service.calculateGrade(61), "D");
+}
+
 TEST_F(QualityServiceTest, DiscountBoundaries) {
     EXPECT_EQ(service.calculateDiscount({0, false, "", false, 12}), 0);
     EXPECT_EQ(service.calculateDiscount({100, false, "", false, 12}), 10);
@@ -43,9 +49,20 @@ TEST_F(QualityServiceTest, UsernameRules) {
     EXPECT_EQ(service.formatUsername("   "), "Ugyldig");
 }
 
+TEST_F(QualityServiceTest, UsernameRejectsEmptyAndTooLongInput) {
+    EXPECT_EQ(service.formatUsername(""), "Ugyldig");
+    EXPECT_EQ(service.formatUsername("abcdefghijklmnopqrstu"), "Ugyldig");
+    EXPECT_EQ(service.formatUsername("abcdefghijklmnopqrst"), "abcdefghijklmnopqrst");
+}
+
 TEST_F(QualityServiceTest, SensorAverageUsesPreciseDivision) {
     EXPECT_DOUBLE_EQ(service.calculateSensorAverage({1, 2}), 1.5);
     EXPECT_DOUBLE_EQ(service.calculateSensorAverage({10, 11, 12}), 11.0);
+}
+
+TEST_F(QualityServiceTest, SensorAverageKeepsFractionsForLongerSeries) {
+    EXPECT_DOUBLE_EQ(service.calculateSensorAverage({2, 3}), 2.5);
+    EXPECT_DOUBLE_EQ(service.calculateSensorAverage({1, 2, 4}), 7.0 / 3.0);
 }
 
 TEST_F(QualityServiceTest, SensorHealthDetectsWarningAndUnstable) {
