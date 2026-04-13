@@ -25,7 +25,7 @@
     <section class="card">
       <h2>Karakter</h2>
       <input id="score" type="number" placeholder="fx 60">
-      <button onclick="callApi('/api/grade?score=' + valueOf('score'), 'gradeResult')">Kald /api/grade</button>
+      <button onclick="gradeCall()">Kald /api/grade</button>
       <div id="gradeResult" class="result"></div>
     </section>
     <section class="card">
@@ -68,27 +68,91 @@
   <script>
     const API_BASE = 'http://localhost:8080';
     const valueOf = id => document.getElementById(id).value;
+    const trimmedValueOf = id => valueOf(id).trim();
+
+    function readIntegerInput(id, label) {
+      const rawValue = trimmedValueOf(id);
+      if (!rawValue) {
+        throw new Error(label + ' mangler');
+      }
+
+      const parsed = Number(rawValue);
+      if (!Number.isInteger(parsed)) {
+        throw new Error(label + ' skal være et heltal');
+      }
+
+      return String(parsed);
+    }
+
     async function callApi(path, targetId) {
       const target = document.getElementById(targetId);
       try {
         const res = await fetch(API_BASE + path);
-        const data = await res.json();
-        target.textContent = JSON.stringify(data, null, 2);
+        const text = await res.text();
+        let data = null;
+
+        if (text.trim()) {
+          try {
+            data = JSON.parse(text);
+          } catch (err) {
+            target.textContent = 'API returnerede ugyldigt JSON (' + res.status + '): ' + text;
+            return;
+          }
+        }
+
+        if (!res.ok) {
+          target.textContent = data && data.error
+            ? 'API-fejl (' + res.status + '): ' + data.error
+            : 'API-fejl (' + res.status + ')';
+          return;
+        }
+
+        target.textContent = data
+          ? JSON.stringify(data, null, 2)
+          : 'API returnerede et tomt svar (' + res.status + ')';
       } catch (err) {
         target.textContent = 'Kunne ikke kontakte API: ' + err.message;
       }
     }
-    function discountCall() {
-      const loyal = document.getElementById('loyal').checked ? '1' : '0';
-      const production = document.getElementById('production').checked ? '1' : '0';
-      const path = '/api/discount?amount=' + valueOf('amount') + '&coupon=' + encodeURIComponent(valueOf('coupon')) + '&loyal=' + loyal + '&production=' + production + '&hour=' + valueOf('hour');
-      callApi(path, 'discountResult');
+
+    function gradeCall() {
+      const target = document.getElementById('gradeResult');
+      try {
+        const score = readIntegerInput('score', 'Score');
+        callApi('/api/grade?score=' + score, 'gradeResult');
+      } catch (err) {
+        target.textContent = err.message;
+      }
     }
+
+    function discountCall() {
+      const target = document.getElementById('discountResult');
+      try {
+        const loyal = document.getElementById('loyal').checked ? '1' : '0';
+        const production = document.getElementById('production').checked ? '1' : '0';
+        const amount = readIntegerInput('amount', 'Beløb');
+        const hourRaw = trimmedValueOf('hour');
+        const hour = hourRaw ? readIntegerInput('hour', 'Time') : '12';
+        const path = '/api/discount?amount=' + amount + '&coupon=' + encodeURIComponent(valueOf('coupon')) + '&loyal=' + loyal + '&production=' + production + '&hour=' + hour;
+        callApi(path, 'discountResult');
+      } catch (err) {
+        target.textContent = err.message;
+      }
+    }
+
     function bookingCall() {
-      const overrideValue = document.getElementById('override').checked ? '1' : '0';
-      const maintenance = document.getElementById('maintenance').checked ? '1' : '0';
-      const path = '/api/booking?seats=' + valueOf('seats') + '&reserved=' + valueOf('reserved') + '&override=' + overrideValue + '&maintenance=' + maintenance;
-      callApi(path, 'bookingResult');
+      const target = document.getElementById('bookingResult');
+      try {
+        const overrideValue = document.getElementById('override').checked ? '1' : '0';
+        const maintenance = document.getElementById('maintenance').checked ? '1' : '0';
+        const seats = readIntegerInput('seats', 'Pladser');
+        const reservedRaw = trimmedValueOf('reserved');
+        const reserved = reservedRaw ? readIntegerInput('reserved', 'Aktuelle reservationer') : '0';
+        const path = '/api/booking?seats=' + seats + '&reserved=' + reserved + '&override=' + overrideValue + '&maintenance=' + maintenance;
+        callApi(path, 'bookingResult');
+      } catch (err) {
+        target.textContent = err.message;
+      }
     }
   </script>
 </body>
